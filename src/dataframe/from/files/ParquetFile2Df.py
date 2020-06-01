@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     boroZipDf\
         .select("Boro", "ZipCount", "ZipList")\
-        .show()
+        .show(5)
 
     # Window functions
 

@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession,Row
 from distutils.util import strtobool
+from pyspark import SparkContext
 
 if __name__ == '__main__':
     # Create the SparkSession
@@ -10,9 +11,11 @@ if __name__ == '__main__':
 
     # SparkContext from the SparkSession
     sc = sparkSession._sc
+    #sc = SparkContext()
 
     # SQLContext instantiated with Java components
     sqlContext = sparkSession._wrapped
+    #sqlContext = SQLContext(sc)
 
     # Here we call our Scala function by accessing it from the JVM, and
     # then convert the resulting DataFrame to a Python DataFrame. We need
@@ -20,6 +23,7 @@ if __name__ == '__main__':
     # well as our string parameter, as we're using the SparkContext to read
     # in the input data in our Scala function. In order to create the Python
     # DataFrame, we must provide the JVM version of the SQLContext during the
+    #Spark natively reads from S3 using Hadoop APIs, not Boto3
     #call to DataFrame creation.
     demographicsRDD = sparkSession.sparkContext.textFile("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/demographic.csv")
     financesRDD = sparkSession.sparkContext.textFile("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/finances.csv")

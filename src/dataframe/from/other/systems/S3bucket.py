@@ -1,5 +1,4 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode,col
 import os.path
 import yaml
 
@@ -9,15 +8,19 @@ if __name__ == '__main__':
         '--packages "org.apache.hadoop:hadoop-aws:2.7.4" pyspark-shell'
     )
 
+    #OR
+    # add -->.config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:2.7.4')
+    # while creating SparkSession
+
     # Create the SparkSession
     sparkSession = SparkSession \
         .builder \
-        .appName("Read Files") \
+        .appName("DataFrames examples") \
         .master('local[*]') \
         .getOrCreate()
 
     current_dir = os.path.abspath(os.path.dirname(__file__))
-    appConfigFilePath = os.path.abspath(current_dir + "/../../../"+"application.yml")
+    appConfigFilePath = os.path.abspath(current_dir + "/../../../../"+"application.yml")
 
     with open(appConfigFilePath) as conf:
         doc = yaml.load(conf,Loader=yaml.FullLoader)
@@ -29,11 +32,8 @@ if __name__ == '__main__':
     hadoop_conf.set("fs.s3a.secret.key", doc["s3_conf"]["secret_access_key"])
     hadoop_conf.set("fs.s3a.endpoint", "s3-eu-west-1.amazonaws.com")
 
-    employeeDf = sparkSession.read\
+    employeeDf = sparkSession.read \
         .json("s3a://"+ doc["s3_conf"]["s3_bucket"]+"/cart_sample_small.txt")
 
     employeeDf.printSchema()
     employeeDf.show(5,False)
-
-    employeeDf.select(col("cart.swid").alias("cust_id")).show(5,False)
-    employeeDf.select(explode("cart.vacationOffer.package.room").alias("vacation_room")).show(5,False)

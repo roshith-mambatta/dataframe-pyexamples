@@ -1,14 +1,30 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, IntegerType, BooleanType,DoubleType
+import os.path
+import yaml
 
 if __name__ == '__main__':
     # Create the SparkSession
     sparkSession = SparkSession \
         .builder \
-        .appName("DataFrames examples") \
+        .appName("Read Files") \
+        .config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:2.7.4,org.apache.spark:spark-avro_2.11:2.4.5') \
         .getOrCreate()
 
-    print("\nCreating dataframe from CSV file using 'SparkSession.read.format()',")
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    appConfigFilePath = os.path.abspath(current_dir + "/../../../"+"application.yml")
+
+    with open(appConfigFilePath) as conf:
+        doc = yaml.load(conf,Loader=yaml.FullLoader)
+
+    # Setup spark to use s3
+    hadoop_conf = sparkSession.sparkContext._jsc.hadoopConfiguration()
+    hadoop_conf.set("fs.s3.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    hadoop_conf.set("fs.s3a.access.key", doc["s3_conf"]["access_key"])
+    hadoop_conf.set("fs.s3a.secret.key", doc["s3_conf"]["secret_access_key"])
+    hadoop_conf.set("fs.s3a.endpoint", "s3-eu-west-1.amazonaws.com")
+
+    print("\nCreating dataframe from CSV file using 'SparkSession.read.format()'")
 
     finSchema = StructType()\
         .add("id", IntegerType(),True)\
@@ -22,7 +38,7 @@ if __name__ == '__main__':
         .option("delimiter", ",")\
         .format("csv") \
         .schema(finSchema)\
-        .load("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/finances.csv")
+        .load("s3a://"+doc["s3_conf"]["s3_bucket"]+"/finances.csv")
 
     finDf.printSchema()
     finDf.show()
@@ -34,7 +50,7 @@ if __name__ == '__main__':
         .option("header", "false")\
         .option("delimiter", ",")\
         .option("inferSchema", "true")\
-        .csv("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/finances.csv")\
+        .csv("s3a://"+doc["s3_conf"]["s3_bucket"]+"/finances.csv")\
         .toDF("id", "has_debt", "has_financial_dependents", "has_student_loans", "income")
 
     print("Number of partitions = " + str(finDf.rdd.getNumPartitions))
@@ -48,4 +64,4 @@ if __name__ == '__main__':
         .mode("overwrite")\
         .option("header", "true")\
         .option("delimiter", "~")\
-        .csv("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/savedOutput/fin")
+        .csv("s3a://"+doc["s3_conf"]["s3_bucket"]+"/fin")

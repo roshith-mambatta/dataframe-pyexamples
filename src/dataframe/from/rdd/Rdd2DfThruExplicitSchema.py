@@ -10,15 +10,27 @@ if __name__ == '__main__':
     sparkSession = SparkSession \
         .builder \
         .appName("DataFrames examples") \
-        .config('spark.jars.packages', 'com.amazonaws:aws-java-sdk:1.7.4') \
         .config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:2.7.4') \
         .master('local[*]') \
         .getOrCreate()
 
     sparkSession.sparkContext.setLogLevel("ERROR")
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    appConfigFilePath = os.path.abspath(current_dir + "/../../../"+"application.yml")
+
+    with open(appConfigFilePath) as conf:
+        doc = yaml.load(conf,Loader=yaml.FullLoader)
+
+    # Setup spark to use s3
+    hadoop_conf=sparkSession.sparkContext._jsc.hadoopConfiguration()
+    hadoop_conf.set("fs.s3.impl","org.apache.hadoop.fs.s3a.S3AFileSystem")
+    hadoop_conf.set("fs.s3a.access.key", doc["s3_conf"]["access_key"])
+    hadoop_conf.set("fs.s3a.secret.key", doc["s3_conf"]["secret_access_key"])
+    hadoop_conf.set('fs.s3a.endpoint','s3.eu-west-1.amazonaws.com')
+
     print("\nConvert RDD to Dataframe using SparkSession.createDataframe(),")
     #Creating RDD of Row
-    txnFctRdd = sparkSession.sparkContext.textFile("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/txn_fct.csv")\
+    txnFctRdd = sparkSession.sparkContext.textFile("s3a://"+ doc["s3_conf"]["s3_bucket"]+"/txn_fct.csv")\
         .filter(lambda record: record.find("txn_id"))\
         .map(lambda record: record.split("|"))\
         .map(lambda record: Row(

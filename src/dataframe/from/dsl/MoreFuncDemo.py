@@ -1,49 +1,64 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode,col,first,trim,lower,ltrim,initcap,format_string,coalesce,lit
+from pyspark.sql.functions import first,trim,lower,ltrim,initcap,format_string,coalesce,lit,col
 from src.model.Person import Person
 
 if __name__ == '__main__':
     # Create the SparkSession
     sparkSession = SparkSession \
         .builder \
-        .appName("DataFrames examples") \
+        .appName("DSL examples") \
         .master('local[*]') \
         .getOrCreate()
 
-    peopleDf = sparkSession.createDataFrame(List(
-        Person("Sidhartha", "Ray", 32, None, Some("Programmer")),
-        Person("Pratik", "Solanki", 22, Some(176.7), None),
+    peopleDf = sparkSession.createDataFrame([
+        Person("Sidhartha", "Ray", 32, None, "Programmer"),
+        Person("Pratik", "Solanki", 22, 176.7, None),
         Person("Ashok ", "Pradhan", 62, None, None),
-        Person(" ashok", "Pradhan", 42, Some(125.3), Some("Chemical Engineer")),
-        Person("Pratik", "Solanki", 22, Some(222.2), Some("Teacher"))
-    ))
+        Person(" ashok", "Pradhan", 42, 125.3, "Chemical Engineer"),
+        Person("Pratik", "Solanki", 22, 222.2, "Teacher")
+    ])
+
 
     peopleDf.show()
     peopleDf.groupBy("firstName").agg(first("weightInLbs")).show()
-    peopleDf.groupBy(trim(lower("firstName"))).agg(first("weightInLbs")).show()
-    peopleDf.groupBy(trim(lower("firstName"))).agg(first("weightInLbs", True)).show()
-    peopleDf.sort("weightInLbs".desc).groupBy(trim(lower("firstName"))).agg(first("weightInLbs", True)).show()
-    peopleDf.sort("weightInLbs".asc_nulls_last).groupBy(trim(lower("firstName"))).agg(first("weightInLbs", True)).show()
+    peopleDf.groupBy(trim(lower(col('firstName')))).agg(first("weightInLbs")).show()
+    peopleDf.groupBy(trim(lower(col("firstName")))).agg(first("weightInLbs", True)).show()
+    peopleDf.sort(col("weightInLbs").desc()).groupBy(trim(lower(col("firstName")))).agg(first("weightInLbs", True)).show()
+    peopleDf.sort(col("weightInLbs").asc_nulls_last()).groupBy(trim(lower(col("firstName")))).agg(first("weightInLbs", True)).show()
 
     correctedPeopleDf = peopleDf\
         .withColumn("firstName", initcap("firstName"))\
         .withColumn("firstName", ltrim(initcap("firstName")))\
         .withColumn("firstName", trim(initcap("firstName")))\
-        correctedPeopleDf.groupBy("firstName").agg(first("weightInLbs")).show()
+
+    correctedPeopleDf.groupBy("firstName").agg(first("weightInLbs")).show()
 
     correctedPeopleDf = correctedPeopleDf\
         .withColumn("fullName", format_string("%s %s", "firstName", "lastName"))\
-        correctedPeopleDf.show()
+
+    correctedPeopleDf.show()
 
     correctedPeopleDf = correctedPeopleDf\
-        .withColumn("weightInLbs", coalesce($"weightInLbs", lit(0)))\
-        correctedPeopleDf.show()
+        .withColumn("weightInLbs", coalesce("weightInLbs", lit(0)))\
+
+    correctedPeopleDf.show()
 
     correctedPeopleDf\
-        .filter(lower($"jobType").contains("engineer"))\
+        .filter(lower(col("jobType")).contains("engineer"))\
         .show()
 
-    correctedPeopleDf\
-        .filter(lower($"jobType").isin(["chemical engineer", "teacher"]:_*)) # List un-listing
-        .filter(lower($"jobType").isin("chemical engineer", "teacher")) #without un-listing
+    # List
+    correctedPeopleDf \
+        .filter(lower(col("jobType")).isin(["chemical engineer","abc" ,"teacher"])) \
         .show()
+
+    # Without List
+    correctedPeopleDf\
+        .filter(lower(col("jobType")).isin("chemical engineer", "teacher"))\
+        .show()
+
+    # Exclusion
+    correctedPeopleDf \
+        .filter(~lower(col("jobType")).isin("chemical engineer", "teacher")) \
+        .show()
+

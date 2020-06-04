@@ -1,26 +1,37 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, row_number, date_format, expr
+import os.path
+import yaml
 
 if __name__ == '__main__':
     # Create the SparkSession
-    # https://mvnrepository.com/artifact/org.apache.spark/spark-avro_2.12/2.4.5
-    # Run on command: >pyspark --packages com.databricks:spark-avro_2.11-4.0.0
     sparkSession = SparkSession \
         .builder \
-        .appName("DataFrames examples") \
+        .appName("Read Files") \
         .master('local[*]') \
+        .config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:2.7.4') \
         .getOrCreate()
 
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    appConfigFilePath = os.path.abspath(current_dir + "/../../../"+"application.yml")
+
+    with open(appConfigFilePath) as conf:
+        doc = yaml.load(conf,Loader=yaml.FullLoader)
+
+    # Setup spark to use s3
+    hadoop_conf = sparkSession.sparkContext._jsc.hadoopConfiguration()
+    hadoop_conf.set("fs.s3.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    hadoop_conf.set("fs.s3a.access.key", doc["s3_conf"]["access_key"])
+    hadoop_conf.set("fs.s3a.secret.key", doc["s3_conf"]["secret_access_key"])
+    hadoop_conf.set("fs.s3a.endpoint", "s3-eu-west-1.amazonaws.com")
+
     # write into NYC_OMO_YEAR_WISE
-    #org.apache.spark.sql.functions.date_format
     dfFromParquet=sparkSession\
         .read\
         .format("parquet")\
-        .load("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/NYC_OMO")\
+        .load("s3a://"+ doc["s3_conf"]["s3_bucket"]+"/NYC_OMO")\
         .withColumn("OrderYear",date_format("OMOCreateDate","YYYY"))\
         .repartition(5)
-
-    #sparkSession.sparkContext.hadoopConfiguration.set("spark.sql.parquet.filterPushdown", "true")
 
     dfFromParquet.printSchema()
     dfFromParquet.show(5,False)
@@ -29,10 +40,10 @@ if __name__ == '__main__':
         .write\
         .partitionBy("OrderYear")\
         .mode("overwrite")\
-        .parquet("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/NYC_OMO_YEAR_WISE")
+        .parquet("s3a://"+ doc["s3_conf"]["s3_bucket"]+"/NYC_OMO_YEAR_WISE")
 
     nycOmoDf = sparkSession.read\
-        .parquet("/00_MyDrive/ApacheSpark/AWS_data/roshith-bucket/NYC_OMO_YEAR_WISE")\
+        .parquet("s3a://"+ doc["s3_conf"]["s3_bucket"]+"/NYC_OMO_YEAR_WISE")\
         .repartition(5)
 
     parquetExplianPlan =nycOmoDf \
@@ -43,7 +54,6 @@ if __name__ == '__main__':
     print("spark.sql.parquet.mergeSchema:", sparkSession.conf.get("spark.sql.parquet.mergeSchema"))
 
     parquetExplianPlan.explain()
-    #parquetExplianPlan.explain(True)
 
     # turn on Parquet push-down, stats filtering, and dictionary filtering
     sparkSession.conf.set('spark.sql.parquet.filterPushdown',"true")

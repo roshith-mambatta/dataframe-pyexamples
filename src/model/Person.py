@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
-class Employee(object):
+class Person(object):
     firstName: str
     lastName: str
     age: int
-    weightInLbs: float
-    jobType: str
+    weightInLbs: float =None
+    jobType: str =None

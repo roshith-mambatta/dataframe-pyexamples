@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode, col, broadcast
+from pyspark.sql.functions import broadcast
 from src.model.Role import Role
 from src.model.Employee import Employee
 
@@ -7,7 +7,7 @@ if __name__ == '__main__':
     # Create the SparkSession
     sparkSession = SparkSession \
         .builder \
-        .appName("DataFrames examples") \
+        .appName("DSL examples") \
         .master('local[*]') \
         .getOrCreate()
 
@@ -41,6 +41,6 @@ if __name__ == '__main__':
     employeeDf.join(empRoleDf, [employeeDf["id"] == empRoleDf["id"]], "full").show()
 
 
-# cross join
+    # cross join
     employeeDf.join(empRoleDf, [employeeDf["id"] == empRoleDf["id"]], "cross").show()
 

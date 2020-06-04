@@ -1,13 +1,36 @@
 s3_conf:
-  access_key: 
-  secret_access_key: 
-  s3_bucket: roshith-bucket
+  access_key: x
+  secret_access_key: z
+  s3_bucket: x-bucket
 
 sftp_conf:
-    hostname: x.amazonaws.com
+    hostname: xyz.amazonaws.com
     port: 22
     username: ubuntu
     pem: resources/sftpKeyPair.ppk
     filetype: csv
     delimiter: |
     directory: /home/ubuntu/data
+
+mongodb_config:
+  input.uri: mongodb://localhost:27017
+  output.uri: mongodb://localhost:27017
+  input.database: school
+  database: school
+  collection: students
+
+redshift_conf:
+  host: abc.com
+  port: 5439
+  database: testdb
+  username: master
+  password: ?
+  filetype: csv
+  delimiter: |
+
+mysql_conf:
+  hostname: abc.com
+  port: 3306
+  database: IRMSDB
+  username: admin
+  password: ?
